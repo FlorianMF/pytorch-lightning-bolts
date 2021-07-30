@@ -1,10 +1,13 @@
 # type: ignore
-from typing import Any, Callable, List, Optional
+from contextlib import contextmanager
+from typing import Any, Callable, Iterable, List, Optional, Type
 
 import torch
+import torch.nn as nn
 from pytorch_lightning import LightningModule, Trainer
 from pytorch_lightning.utilities.apply_func import apply_to_collection
 from pytorch_lightning.utilities.exceptions import MisconfigurationException
+from torch import Tensor
 
 from pl_bolts.callbacks.verification.base import VerificationBase, VerificationCallbackBase
 
@@ -15,6 +18,14 @@ class BatchGradientVerification(VerificationBase):
     This can happen if reshape- and/or permutation operations are carried out in the wrong order or
     on the wrong tensor dimensions.
     """
+
+    NORM_LAYER_CLASSES = (
+        torch.nn.BatchNorm1d,
+        torch.nn.BatchNorm2d,
+        torch.nn.BatchNorm3d,
+        torch.nn.SyncBatchNorm,
+        torch.nn.GroupNorm,
+    )
 
     def check(
         self,
@@ -58,7 +69,8 @@ class BatchGradientVerification(VerificationBase):
             input_batch.requires_grad = True
 
         self.model.zero_grad()
-        output = self._model_forward(input_array)
+        with selective_eval(self.model, self.NORM_LAYER_CLASSES):
+            output = self._model_forward(input_array)
 
         # backward on the i-th sample should lead to gradient only in i-th input slice
         output_mapping(output)[sample_idx].sum().backward()
@@ -119,7 +131,7 @@ class BatchGradientVerificationCallback(VerificationCallbackBase):
             self._raise()
 
 
-def default_input_mapping(data: Any) -> List[torch.Tensor]:
+def default_input_mapping(data: Any) -> List[Tensor]:
     """
     Finds all tensors in a (nested) collection that have the same batch size.
 
@@ -140,14 +152,14 @@ def default_input_mapping(data: Any) -> List[torch.Tensor]:
     torch.Size([3, 2])
     """
     tensors = collect_tensors(data)
-    batches: List[torch.Tensor] = []
+    batches: List[Tensor] = []
     for tensor in tensors:
         if tensor.ndim > 0 and (not batches or tensor.size(0) == batches[0].size(0)):
             batches.append(tensor)
     return batches
 
 
-def default_output_mapping(data: Any) -> torch.Tensor:
+def default_output_mapping(data: Any) -> Tensor:
     """
     Pulls out all tensors in a output collection and combines them into one big batch
     for verification.
@@ -170,7 +182,7 @@ def default_output_mapping(data: Any) -> torch.Tensor:
         >>> result.shape
         torch.Size([3, 7])
     """
-    if isinstance(data, torch.Tensor):
+    if isinstance(data, Tensor):
         return data
 
     batches = default_input_mapping(data)
@@ -180,13 +192,36 @@ def default_output_mapping(data: Any) -> torch.Tensor:
     return combined
 
 
-def collect_tensors(data: Any) -> List[torch.Tensor]:
+def collect_tensors(data: Any) -> List[Tensor]:
     """ Filters all tensors in a collection and returns them in a list. """
     tensors = []
 
-    def collect_batches(tensor: torch.Tensor) -> torch.Tensor:
+    def collect_batches(tensor: Tensor) -> Tensor:
         tensors.append(tensor)
         return tensor
 
-    apply_to_collection(data, dtype=torch.Tensor, function=collect_batches)
+    apply_to_collection(data, dtype=Tensor, function=collect_batches)
     return tensors
+
+
+@contextmanager
+def selective_eval(model: nn.Module, layer_types: Iterable[Type[nn.Module]]) -> None:
+    """
+    A context manager that sets all requested types of layers to eval mode. This method uses an ``isinstance``
+    check, so all subclasses are also affected.
+
+    Args:
+        model: A model which has layers that need to be set to eval mode.
+        layer_types: The list of class objects for which all layers of that type will be set to eval mode.
+    """
+    to_revert = []
+    try:
+        for module in model.modules():
+            if isinstance(module, tuple(layer_types)):
+                if module.training:
+                    module.eval()
+                    to_revert.append(module)
+        yield
+    finally:
+        for module in to_revert:
+            module.train()

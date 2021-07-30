@@ -2,8 +2,8 @@ import os
 from argparse import ArgumentParser
 from typing import Union
 
-import pytorch_lightning as pl
 import torch
+from pytorch_lightning import LightningDataModule, LightningModule, Trainer
 from torch import optim as optim
 from torch.utils.data import DataLoader
 
@@ -13,7 +13,53 @@ from pl_bolts.models.self_supervised.amdim.networks import AMDIMEncoder
 from pl_bolts.utils.self_supervised import torchvision_ssl_encoder
 
 
-class AMDIM(pl.LightningModule):
+def generate_power_seq(lr, nb):
+    half = int(nb / 2)
+    coefs = [2**pow for pow in range(half, -half - 1, -1)]
+    lrs = [lr * coef for coef in coefs]
+    return lrs
+
+
+# CIFAR 10
+LEARNING_RATE_CIFAR = 2e-4
+DATASET_CIFAR10 = {
+    'dataset': 'cifar10',
+    'ndf': 320,
+    'n_rkhs': 1280,
+    'depth': 10,
+    'image_height': 32,
+    'batch_size': 200,
+    'nb_classes': 10,
+    'lr_options': generate_power_seq(LEARNING_RATE_CIFAR, 11),
+}
+
+# stl-10
+LEARNING_RATE_STL = 2e-4
+DATASET_STL10 = {
+    'dataset': 'stl10',
+    'ndf': 192,
+    'n_rkhs': 1536,
+    'depth': 8,
+    'image_height': 64,
+    'batch_size': 200,
+    'nb_classes': 10,
+    'lr_options': generate_power_seq(LEARNING_RATE_STL, 11),
+}
+
+LEARNING_RATE_IMAGENET = 2e-4
+DATASET_IMAGENET2012 = {
+    'dataset': 'imagenet2012',
+    'ndf': 320,
+    'n_rkhs': 2560,
+    'depth': 10,
+    'image_height': 128,
+    'batch_size': 200,
+    'nb_classes': 1000,
+    'lr_options': generate_power_seq(LEARNING_RATE_IMAGENET, 11),
+}
+
+
+class AMDIM(LightningModule):
     """
     PyTorch Lightning implementation of
     `Augmented Multiscale Deep InfoMax (AMDIM) <https://arxiv.org/abs/1906.00910>`_.
@@ -39,8 +85,8 @@ class AMDIM(pl.LightningModule):
 
     def __init__(
         self,
-        datamodule: Union[str, pl.LightningDataModule] = 'cifar10',
-        encoder: Union[str, torch.nn.Module, pl.LightningModule] = 'amdim_encoder',
+        datamodule: Union[str, LightningDataModule] = 'cifar10',
+        encoder: Union[str, torch.nn.Module, LightningModule] = 'amdim_encoder',
         contrastive_task: Union[FeatureMapContrastiveTask] = FeatureMapContrastiveTask('01, 02, 11'),
         image_channels: int = 3,
         image_height: int = 32,
@@ -237,81 +283,7 @@ class AMDIM(pl.LightningModule):
         parser = ArgumentParser(parents=[parent_parser], add_help=False)
         parser.add_argument('--datamodule', type=str, default='cifar10')
 
-        # CIFAR 10
-        cf_root_lr = 2e-4
-        cifar_10 = {
-            'dataset': 'cifar10',
-            'ndf': 320,
-            'n_rkhs': 1280,
-            'depth': 10,
-            'image_height': 32,
-            'batch_size': 200,
-            'nb_classes': 10,
-            'lr_options': [
-                cf_root_lr * 32,
-                cf_root_lr * 16,
-                cf_root_lr * 8,
-                cf_root_lr * 4,
-                cf_root_lr * 2,
-                cf_root_lr,
-                cf_root_lr * 1 / 2,
-                cf_root_lr * 1 / 4,
-                cf_root_lr * 1 / 8,
-                cf_root_lr * 1 / 16,
-                cf_root_lr * 1 / 32,
-            ]
-        }
-
-        # stl-10
-        stl_root_lr = 2e-4
-        stl10 = {
-            'dataset': 'stl10',
-            'ndf': 192,
-            'n_rkhs': 1536,
-            'depth': 8,
-            'image_height': 64,
-            'batch_size': 200,
-            'nb_classes': 10,
-            'lr_options': [
-                stl_root_lr * 32,
-                stl_root_lr * 16,
-                stl_root_lr * 8,
-                stl_root_lr * 4,
-                stl_root_lr * 2,
-                stl_root_lr,
-                stl_root_lr * 1 / 2,
-                stl_root_lr * 1 / 4,
-                stl_root_lr * 1 / 8,
-                stl_root_lr * 1 / 16,
-                stl_root_lr * 1 / 32,
-            ]
-        }
-
-        imagenet_root_lr = 2e-4
-        imagenet2012 = {
-            'dataset': 'imagenet2012',
-            'ndf': 320,
-            'n_rkhs': 2560,
-            'depth': 10,
-            'image_height': 128,
-            'batch_size': 200,
-            'nb_classes': 1000,
-            'lr_options': [
-                imagenet_root_lr * 32,
-                imagenet_root_lr * 16,
-                imagenet_root_lr * 8,
-                imagenet_root_lr * 4,
-                imagenet_root_lr * 2,
-                imagenet_root_lr,
-                imagenet_root_lr * 1 / 2,
-                imagenet_root_lr * 1 / 4,
-                imagenet_root_lr * 1 / 8,
-                imagenet_root_lr * 1 / 16,
-                imagenet_root_lr * 1 / 32,
-            ]
-        }
-
-        DATASETS = {'cifar10': cifar_10, 'stl10': stl10, 'imagenet2012': imagenet2012}
+        DATASETS = {'cifar10': DATASET_CIFAR10, 'stl10': DATASET_STL10, 'imagenet2012': DATASET_IMAGENET2012}
 
         (args, _) = parser.parse_known_args()
         dataset = DATASETS[args.datamodule]
@@ -349,13 +321,13 @@ class AMDIM(pl.LightningModule):
 
 def cli_main():
     parser = ArgumentParser()
-    parser = pl.Trainer.add_argparse_args(parser)
+    parser = Trainer.add_argparse_args(parser)
     parser = AMDIM.add_model_specific_args(parser)
 
     args = parser.parse_args()
 
     model = AMDIM(**vars(args), encoder='resnet18')
-    trainer = pl.Trainer.from_argparse_args(args)
+    trainer = Trainer.from_argparse_args(args)
     trainer.fit(model)
 
 
