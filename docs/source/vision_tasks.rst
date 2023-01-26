@@ -1,6 +1,10 @@
-Self-supervised Learning Contrastive tasks
-==========================================
+Self-supervised Learning
+========================
 This section implements popular contrastive learning tasks used in self-supervised learning.
+
+.. note::
+
+    We rely on the community to keep these updated and working. If something doesn't work, we'd really appreciate a contribution to fix!
 
 ---------------
 

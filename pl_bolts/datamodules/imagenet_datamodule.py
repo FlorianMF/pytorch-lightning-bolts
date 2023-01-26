@@ -1,5 +1,5 @@
-# type: ignore[override]
 import os
+from argparse import ArgumentParser
 from typing import Any, Callable, Optional
 
 from pytorch_lightning import LightningDataModule
@@ -8,14 +8,16 @@ from torch.utils.data import DataLoader
 from pl_bolts.datasets import UnlabeledImagenet
 from pl_bolts.transforms.dataset_normalizations import imagenet_normalization
 from pl_bolts.utils import _TORCHVISION_AVAILABLE
+from pl_bolts.utils.stability import under_review
 from pl_bolts.utils.warnings import warn_missing_pkg
 
 if _TORCHVISION_AVAILABLE:
     from torchvision import transforms as transform_lib
 else:  # pragma: no cover
-    warn_missing_pkg('torchvision')
+    warn_missing_pkg("torchvision")
 
 
+@under_review()
 class ImagenetDataModule(LightningDataModule):
     """
     .. figure:: https://3qeqpr26caki16dnhd19sv6by6v-wpengine.netdna-ssl.com/wp-content/uploads/2017/08/
@@ -46,7 +48,7 @@ class ImagenetDataModule(LightningDataModule):
         Trainer().fit(model, datamodule=dm)
     """
 
-    name = 'imagenet'
+    name = "imagenet"
 
     def __init__(
         self,
@@ -54,10 +56,10 @@ class ImagenetDataModule(LightningDataModule):
         meta_dir: Optional[str] = None,
         num_imgs_per_val_class: int = 50,
         image_size: int = 224,
-        num_workers: int = 16,
+        num_workers: int = 0,
         batch_size: int = 32,
-        shuffle: bool = False,
-        pin_memory: bool = False,
+        shuffle: bool = True,
+        pin_memory: bool = True,
         drop_last: bool = False,
         *args: Any,
         **kwargs: Any,
@@ -79,7 +81,7 @@ class ImagenetDataModule(LightningDataModule):
 
         if not _TORCHVISION_AVAILABLE:  # pragma: no cover
             raise ModuleNotFoundError(
-                'You want to use ImageNet dataset loaded from `torchvision` which is not installed yet.'
+                "You want to use ImageNet dataset loaded from `torchvision` which is not installed yet."
             )
 
         self.image_size = image_size
@@ -109,23 +111,21 @@ class ImagenetDataModule(LightningDataModule):
 
         if split not in dirs:
             raise FileNotFoundError(
-                f'a {split} Imagenet split was not found in {data_dir},'
-                f' make sure the folder contains a subfolder named {split}'
+                f"a {split} Imagenet split was not found in {data_dir},"
+                f" make sure the folder contains a subfolder named {split}"
             )
 
     def prepare_data(self) -> None:
-        """
-        This method already assumes you have imagenet2012 downloaded.
-        It validates the data using the meta.bin.
+        """This method already assumes you have imagenet2012 downloaded. It validates the data using the meta.bin.
 
         .. warning:: Please download imagenet on your own first.
         """
-        self._verify_splits(self.data_dir, 'train')
-        self._verify_splits(self.data_dir, 'val')
+        self._verify_splits(self.data_dir, "train")
+        self._verify_splits(self.data_dir, "val")
 
-        for split in ['train', 'val']:
+        for split in ["train", "val"]:
             files = os.listdir(os.path.join(self.data_dir, split))
-            if 'meta.bin' not in files:
+            if "meta.bin" not in files:
                 raise FileNotFoundError(
                     """
                 no meta.bin present. Imagenet is no longer automatically downloaded by PyTorch.
@@ -144,9 +144,7 @@ class ImagenetDataModule(LightningDataModule):
                 )
 
     def train_dataloader(self) -> DataLoader:
-        """
-        Uses the train split of imagenet2012 and puts away a portion of it for the validation split
-        """
+        """Uses the train split of imagenet2012 and puts away a portion of it for the validation split."""
         transforms = self.train_transform() if self.train_transforms is None else self.train_transforms
 
         dataset = UnlabeledImagenet(
@@ -154,8 +152,8 @@ class ImagenetDataModule(LightningDataModule):
             num_imgs_per_class=-1,
             num_imgs_per_class_val_split=self.num_imgs_per_val_class,
             meta_dir=self.meta_dir,
-            split='train',
-            transform=transforms
+            split="train",
+            transform=transforms,
         )
         loader: DataLoader = DataLoader(
             dataset,
@@ -163,26 +161,26 @@ class ImagenetDataModule(LightningDataModule):
             shuffle=self.shuffle,
             num_workers=self.num_workers,
             drop_last=self.drop_last,
-            pin_memory=self.pin_memory
+            pin_memory=self.pin_memory,
         )
         return loader
 
     def val_dataloader(self) -> DataLoader:
-        """
-        Uses the part of the train split of imagenet2012  that was not used for training via `num_imgs_per_val_class`
+        """Uses the part of the train split of imagenet2012  that was not used for training via
+        `num_imgs_per_val_class`
 
         Args:
             batch_size: the batch size
             transforms: the transforms
         """
-        transforms = self.train_transform() if self.val_transforms is None else self.val_transforms
+        transforms = self.val_transform() if self.val_transforms is None else self.val_transforms
 
         dataset = UnlabeledImagenet(
             self.data_dir,
             num_imgs_per_class_val_split=self.num_imgs_per_val_class,
             meta_dir=self.meta_dir,
-            split='val',
-            transform=transforms
+            split="val",
+            transform=transforms,
         )
         loader: DataLoader = DataLoader(
             dataset,
@@ -190,18 +188,16 @@ class ImagenetDataModule(LightningDataModule):
             shuffle=False,
             num_workers=self.num_workers,
             drop_last=self.drop_last,
-            pin_memory=self.pin_memory
+            pin_memory=self.pin_memory,
         )
         return loader
 
     def test_dataloader(self) -> DataLoader:
-        """
-        Uses the validation split of imagenet2012 for testing
-        """
+        """Uses the validation split of imagenet2012 for testing."""
         transforms = self.val_transform() if self.test_transforms is None else self.test_transforms
 
         dataset = UnlabeledImagenet(
-            self.data_dir, num_imgs_per_class=-1, meta_dir=self.meta_dir, split='test', transform=transforms
+            self.data_dir, num_imgs_per_class=-1, meta_dir=self.meta_dir, split="test", transform=transforms
         )
         loader: DataLoader = DataLoader(
             dataset,
@@ -209,13 +205,12 @@ class ImagenetDataModule(LightningDataModule):
             shuffle=False,
             num_workers=self.num_workers,
             drop_last=self.drop_last,
-            pin_memory=self.pin_memory
+            pin_memory=self.pin_memory,
         )
         return loader
 
     def train_transform(self) -> Callable:
-        """
-        The standard imagenet transforms
+        """The standard imagenet transforms.
 
         .. code-block:: python
 
@@ -228,20 +223,20 @@ class ImagenetDataModule(LightningDataModule):
                     std=[0.229, 0.224, 0.225]
                 ),
             ])
-
         """
-        preprocessing = transform_lib.Compose([
-            transform_lib.RandomResizedCrop(self.image_size),
-            transform_lib.RandomHorizontalFlip(),
-            transform_lib.ToTensor(),
-            imagenet_normalization(),
-        ])
+        preprocessing = transform_lib.Compose(
+            [
+                transform_lib.RandomResizedCrop(self.image_size),
+                transform_lib.RandomHorizontalFlip(),
+                transform_lib.ToTensor(),
+                imagenet_normalization(),
+            ]
+        )
 
         return preprocessing
 
     def val_transform(self) -> Callable:
-        """
-        The standard imagenet transforms for validation
+        """The standard imagenet transforms for validation.
 
         .. code-block:: python
 
@@ -254,13 +249,24 @@ class ImagenetDataModule(LightningDataModule):
                     std=[0.229, 0.224, 0.225]
                 ),
             ])
-
         """
 
-        preprocessing = transform_lib.Compose([
-            transform_lib.Resize(self.image_size + 32),
-            transform_lib.CenterCrop(self.image_size),
-            transform_lib.ToTensor(),
-            imagenet_normalization(),
-        ])
+        preprocessing = transform_lib.Compose(
+            [
+                transform_lib.Resize(self.image_size + 32),
+                transform_lib.CenterCrop(self.image_size),
+                transform_lib.ToTensor(),
+                imagenet_normalization(),
+            ]
+        )
         return preprocessing
+
+    @staticmethod
+    def add_dataset_specific_args(parent_parser: ArgumentParser) -> ArgumentParser:
+        parser = ArgumentParser(parents=[parent_parser], add_help=False)
+
+        parser.add_argument("--data_dir", type=str, default=".")
+        parser.add_argument("--num_workers", type=int, default=0)
+        parser.add_argument("--batch_size", type=int, default=32)
+
+        return parser

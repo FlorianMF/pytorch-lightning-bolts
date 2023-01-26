@@ -1,19 +1,13 @@
 import torch
 from torch import nn
 
+from pl_bolts.utils.stability import under_review
 
+
+@under_review()
 class UpSampleConv(nn.Module):
-
     def __init__(
-        self,
-        in_channels,
-        out_channels,
-        kernel=4,
-        strides=2,
-        padding=1,
-        activation=True,
-        batchnorm=True,
-        dropout=False
+        self, in_channels, out_channels, kernel=4, strides=2, padding=1, activation=True, batchnorm=True, dropout=False
     ):
         super().__init__()
         self.activation = activation
@@ -41,11 +35,11 @@ class UpSampleConv(nn.Module):
         return x
 
 
+@under_review()
 class DownSampleConv(nn.Module):
-
     def __init__(self, in_channels, out_channels, kernel=4, strides=2, padding=1, activation=True, batchnorm=True):
-        """
-        Paper details:
+        """Paper details:
+
         - C64-C128-C256-C512-C512-C512-C512-C512
         - All convolutions are 4×4 spatial filters applied with stride 2
         - Convolutions in the encoder downsample by a factor of 2
@@ -71,11 +65,11 @@ class DownSampleConv(nn.Module):
         return x
 
 
+@under_review()
 class Generator(nn.Module):
-
     def __init__(self, in_channels, out_channels):
-        """
-        Paper details:
+        """Paper details:
+
         - Encoder: C64-C128-C256-C512-C512-C512-C512-C512
         - All convolutions are 4×4 spatial filters applied with stride 2
         - Convolutions in the encoder downsample by a factor of 2
@@ -133,8 +127,8 @@ class Generator(nn.Module):
         return self.tanh(x)
 
 
+@under_review()
 class PatchGAN(nn.Module):
-
     def __init__(self, input_channels):
         super().__init__()
         self.d1 = DownSampleConv(input_channels, 64, batchnorm=False)

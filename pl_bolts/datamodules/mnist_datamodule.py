@@ -1,3 +1,4 @@
+from argparse import ArgumentParser
 from typing import Any, Callable, Optional, Union
 
 from pl_bolts.datamodules.vision_datamodule import VisionDataModule
@@ -8,7 +9,7 @@ from pl_bolts.utils.warnings import warn_missing_pkg
 if _TORCHVISION_AVAILABLE:
     from torchvision import transforms as transform_lib
 else:  # pragma: no cover
-    warn_missing_pkg('torchvision')
+    warn_missing_pkg("torchvision")
 
 
 class MNISTDataModule(VisionDataModule):
@@ -38,6 +39,7 @@ class MNISTDataModule(VisionDataModule):
 
         Trainer().fit(model, datamodule=dm)
     """
+
     name = "mnist"
     dataset_cls = MNIST
     dims = (1, 28, 28)
@@ -46,12 +48,12 @@ class MNISTDataModule(VisionDataModule):
         self,
         data_dir: Optional[str] = None,
         val_split: Union[int, float] = 0.2,
-        num_workers: int = 16,
+        num_workers: int = 0,
         normalize: bool = False,
         batch_size: int = 32,
         seed: int = 42,
-        shuffle: bool = False,
-        pin_memory: bool = False,
+        shuffle: bool = True,
+        pin_memory: bool = True,
         drop_last: bool = False,
         *args: Any,
         **kwargs: Any,
@@ -71,7 +73,7 @@ class MNISTDataModule(VisionDataModule):
         """
         if not _TORCHVISION_AVAILABLE:  # pragma: no cover
             raise ModuleNotFoundError(
-                'You want to use MNIST dataset loaded from `torchvision` which is not installed yet.'
+                "You want to use MNIST dataset loaded from `torchvision` which is not installed yet."
             )
 
         super().__init__(  # type: ignore[misc]
@@ -98,10 +100,20 @@ class MNISTDataModule(VisionDataModule):
 
     def default_transforms(self) -> Callable:
         if self.normalize:
-            mnist_transforms = transform_lib.Compose([
-                transform_lib.ToTensor(), transform_lib.Normalize(mean=(0.5, ), std=(0.5, ))
-            ])
+            mnist_transforms = transform_lib.Compose(
+                [transform_lib.ToTensor(), transform_lib.Normalize(mean=(0.5,), std=(0.5,))]
+            )
         else:
             mnist_transforms = transform_lib.Compose([transform_lib.ToTensor()])
 
         return mnist_transforms
+
+    @staticmethod
+    def add_dataset_specific_args(parent_parser: ArgumentParser) -> ArgumentParser:
+        parser = ArgumentParser(parents=[parent_parser], add_help=False)
+
+        parser.add_argument("--data_dir", type=str, default=".")
+        parser.add_argument("--num_workers", type=int, default=0)
+        parser.add_argument("--batch_size", type=int, default=32)
+
+        return parser

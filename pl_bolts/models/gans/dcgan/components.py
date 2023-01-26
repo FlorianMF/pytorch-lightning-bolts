@@ -1,9 +1,9 @@
 # Based on https://github.com/pytorch/examples/blob/master/dcgan/main.py
-from torch import nn, Tensor
+import torch.nn as nn
+from torch import Tensor
 
 
 class DCGANGenerator(nn.Module):
-
     def __init__(self, latent_dim: int, feature_maps: int, image_channels: int) -> None:
         """
         Args:
@@ -49,7 +49,6 @@ class DCGANGenerator(nn.Module):
 
 
 class DCGANDiscriminator(nn.Module):
-
     def __init__(self, feature_maps: int, image_channels: int) -> None:
         """
         Args:

@@ -1,5 +1,4 @@
-torch>=1.6
-torchmetrics>=0.2.0
-pytorch-lightning>=1.1.1
-dataclasses ; python_version <= "3.6"
-packaging
+numpy<1.24.0 # todo: seeing some compatibility issues
+pytorch-lightning>=1.7.0
+lightning-utilities>=0.3.0, !=0.4.0  # this is needed for PL 1.7
+torchvision>=0.10.0  # todo: move to topic related extras

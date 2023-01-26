@@ -5,11 +5,14 @@ from typing import Any, Dict, List, Optional
 
 from pytorch_lightning import LightningDataModule, LightningModule
 
+from pl_bolts.utils.stability import under_review
 
+
+@under_review()
 @dataclass(frozen=True)
 class LitArg:
-    """Dataclass to represent init args of an object
-    """
+    """Dataclass to represent init args of an object."""
+
     name: str
     types: tuple
     default: Any
@@ -17,9 +20,9 @@ class LitArg:
     context: Optional[str] = None
 
 
+@under_review()
 class LightningArgumentParser(ArgumentParser):
-    """
-    Extension of argparse.ArgumentParser that lets you parse arbitrary object init args.
+    """Extension of argparse.ArgumentParser that lets you parse arbitrary object init args.
 
     Example::
 
@@ -73,8 +76,8 @@ class LightningArgumentParser(ArgumentParser):
         return lit_args
 
 
+@under_review()
 def gather_lit_args(cls: Any, root_cls: Optional[Any] = None) -> List[LitArg]:
-
     if root_cls is None:
         if issubclass(cls, LightningModule):
             root_cls = LightningModule
@@ -102,10 +105,10 @@ def gather_lit_args(cls: Any, root_cls: Optional[Any] = None) -> List[LitArg]:
                 try:
                     arg_types = tuple(arg_type.__args__)
                 except AttributeError:
-                    arg_types = (arg_type, )
+                    arg_types = (arg_type,)
 
                 # If type is empty, that means it hasn't been given type hint. We skip these.
-                arg_is_missing_type_hint = arg_types == (inspect.Parameter.empty, )
+                arg_is_missing_type_hint = arg_types == (inspect.Parameter.empty,)
                 # Some args should be ignored by default (self, kwargs, args)
                 arg_is_in_blacklist = arg in blacklisted_args and arg_is_missing_type_hint
                 # We only keep the first arg we see of a given name, as it overrides the parents

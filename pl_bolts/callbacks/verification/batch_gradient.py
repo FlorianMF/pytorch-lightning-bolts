@@ -10,13 +10,15 @@ from pytorch_lightning.utilities.exceptions import MisconfigurationException
 from torch import Tensor
 
 from pl_bolts.callbacks.verification.base import VerificationBase, VerificationCallbackBase
+from pl_bolts.utils.stability import under_review
 
 
+@under_review()
 class BatchGradientVerification(VerificationBase):
-    """
-    Checks if a model mixes data across the batch dimension.
-    This can happen if reshape- and/or permutation operations are carried out in the wrong order or
-    on the wrong tensor dimensions.
+    """Checks if a model mixes data across the batch dimension.
+
+    This can happen if reshape- and/or permutation operations are carried out in the wrong order or on the wrong tensor
+    dimensions.
     """
 
     NORM_LAYER_CLASSES = (
@@ -34,8 +36,7 @@ class BatchGradientVerification(VerificationBase):
         output_mapping: Optional[Callable] = None,
         sample_idx: int = 0,
     ) -> bool:
-        """
-        Runs the test for data mixing across the batch.
+        """Runs the test for data mixing across the batch.
 
         Arguments:
             input_array: A dummy input for the model. Can be a tuple or dict in case the model takes
@@ -83,9 +84,10 @@ class BatchGradientVerification(VerificationBase):
         return not any(has_grad_outside_sample) and all(has_grad_inside_sample)
 
 
+@under_review()
 class BatchGradientVerificationCallback(VerificationCallbackBase):
-    """
-    The callback version of the :class:`BatchGradientVerification` test.
+    """The callback version of the :class:`BatchGradientVerification` test.
+
     Verification is performed right before training begins.
     """
 
@@ -131,9 +133,9 @@ class BatchGradientVerificationCallback(VerificationCallbackBase):
             self._raise()
 
 
+@under_review()
 def default_input_mapping(data: Any) -> List[Tensor]:
-    """
-    Finds all tensors in a (nested) collection that have the same batch size.
+    """Finds all tensors in a (nested) collection that have the same batch size.
 
     Args:
         data: a tensor or a collection of tensors (tuple, list, dict, etc.).
@@ -159,10 +161,9 @@ def default_input_mapping(data: Any) -> List[Tensor]:
     return batches
 
 
+@under_review()
 def default_output_mapping(data: Any) -> Tensor:
-    """
-    Pulls out all tensors in a output collection and combines them into one big batch
-    for verification.
+    """Pulls out all tensors in a output collection and combines them into one big batch for verification.
 
     Args:
         data: a tensor or a (nested) collection of tensors (tuple, list, dict, etc.).
@@ -192,8 +193,9 @@ def default_output_mapping(data: Any) -> Tensor:
     return combined
 
 
+@under_review()
 def collect_tensors(data: Any) -> List[Tensor]:
-    """ Filters all tensors in a collection and returns them in a list. """
+    """Filters all tensors in a collection and returns them in a list."""
     tensors = []
 
     def collect_batches(tensor: Tensor) -> Tensor:
@@ -204,10 +206,10 @@ def collect_tensors(data: Any) -> List[Tensor]:
     return tensors
 
 
+@under_review()
 @contextmanager
 def selective_eval(model: nn.Module, layer_types: Iterable[Type[nn.Module]]) -> None:
-    """
-    A context manager that sets all requested types of layers to eval mode. This method uses an ``isinstance``
+    """A context manager that sets all requested types of layers to eval mode. This method uses an ``isinstance``
     check, so all subclasses are also affected.
 
     Args:

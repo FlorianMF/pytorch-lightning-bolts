@@ -1,5 +1,4 @@
-"""
-Adapted from: https://github.com/facebookresearch/moco
+"""Adapted from: https://github.com/facebookresearch/moco.
 
 Original work is: Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 This implementation is: Copyright (c) PyTorch Lightning, Inc. and its affiliates. All Rights Reserved
@@ -14,6 +13,7 @@ from typing import Union
 
 import torch
 from pytorch_lightning import LightningModule, Trainer
+from pytorch_lightning.strategies import DDPStrategy
 from torch import nn
 from torch.nn import functional as F
 
@@ -27,17 +27,18 @@ from pl_bolts.models.self_supervised.moco.transforms import (
     Moco2TrainSTL10Transforms,
 )
 from pl_bolts.utils import _TORCHVISION_AVAILABLE
+from pl_bolts.utils.stability import under_review
 from pl_bolts.utils.warnings import warn_missing_pkg
 
 if _TORCHVISION_AVAILABLE:
     import torchvision
 else:  # pragma: no cover
-    warn_missing_pkg('torchvision')
+    warn_missing_pkg("torchvision")
 
 
+@under_review()
 class Moco_v2(LightningModule):
-    """
-    PyTorch Lightning implementation of `Moco <https://arxiv.org/abs/2003.04297>`_
+    """PyTorch Lightning implementation of `Moco <https://arxiv.org/abs/2003.04297>`_
 
     Paper authors: Xinlei Chen, Haoqi Fan, Ross Girshick, Kaiming He.
 
@@ -46,6 +47,7 @@ class Moco_v2(LightningModule):
         - `William Falcon <https://github.com/williamFalcon>`_
 
     Example::
+
         from pl_bolts.models.self_supervised import Moco_v2
         model = Moco_v2()
         trainer = Trainer()
@@ -67,7 +69,7 @@ class Moco_v2(LightningModule):
 
     def __init__(
         self,
-        base_encoder: Union[str, torch.nn.Module] = 'resnet18',
+        base_encoder: Union[str, torch.nn.Module] = "resnet18",
         emb_dim: int = 128,
         num_negatives: int = 65536,
         encoder_momentum: float = 0.999,
@@ -75,7 +77,7 @@ class Moco_v2(LightningModule):
         learning_rate: float = 0.03,
         momentum: float = 0.9,
         weight_decay: float = 1e-4,
-        data_dir: str = './',
+        data_dir: str = "./",
         batch_size: int = 256,
         use_mlp: bool = False,
         num_workers: int = 8,
@@ -128,9 +130,7 @@ class Moco_v2(LightningModule):
         self.register_buffer("val_queue_ptr", torch.zeros(1, dtype=torch.long))
 
     def init_encoders(self, base_encoder):
-        """
-        Override to add your own encoders
-        """
+        """Override to add your own encoders."""
 
         template_model = getattr(torchvision.models, base_encoder)
         encoder_q = template_model(num_classes=self.hparams.emb_dim)
@@ -140,17 +140,15 @@ class Moco_v2(LightningModule):
 
     @torch.no_grad()
     def _momentum_update_key_encoder(self):
-        """
-        Momentum update of the key encoder
-        """
+        """Momentum update of the key encoder."""
         for param_q, param_k in zip(self.encoder_q.parameters(), self.encoder_k.parameters()):
             em = self.hparams.encoder_momentum
-            param_k.data = param_k.data * em + param_q.data * (1. - em)
+            param_k.data = param_k.data * em + param_q.data * (1.0 - em)
 
     @torch.no_grad()
     def _dequeue_and_enqueue(self, keys, queue_ptr, queue):
         # gather keys before updating queue
-        if self.trainer.use_ddp or self.trainer.use_ddp2:
+        if self._use_ddp(self.trainer):
             keys = concat_all_gather(keys)
 
         batch_size = keys.shape[0]
@@ -159,15 +157,15 @@ class Moco_v2(LightningModule):
         assert self.hparams.num_negatives % batch_size == 0  # for simplicity
 
         # replace the keys at ptr (dequeue and enqueue)
-        queue[:, ptr:ptr + batch_size] = keys.T
+        queue[:, ptr : ptr + batch_size] = keys.T
         ptr = (ptr + batch_size) % self.hparams.num_negatives  # move pointer
 
         queue_ptr[0] = ptr
 
     @torch.no_grad()
     def _batch_shuffle_ddp(self, x):  # pragma: no cover
-        """
-        Batch shuffle, for making use of BatchNorm.
+        """Batch shuffle, for making use of BatchNorm.
+
         *** Only support DistributedDataParallel (DDP) model. ***
         """
         # gather from all gpus
@@ -194,8 +192,8 @@ class Moco_v2(LightningModule):
 
     @torch.no_grad()
     def _batch_unshuffle_ddp(self, x, idx_unshuffle):  # pragma: no cover
-        """
-        Undo batch shuffle.
+        """Undo batch shuffle.
+
         *** Only support DistributedDataParallel (DDP) model. ***
         """
         # gather from all gpus
@@ -229,22 +227,22 @@ class Moco_v2(LightningModule):
         with torch.no_grad():  # no gradient to keys
 
             # shuffle for making use of BN
-            if self.trainer.use_ddp or self.trainer.use_ddp2:
+            if self._use_ddp(self.trainer):
                 img_k, idx_unshuffle = self._batch_shuffle_ddp(img_k)
 
             k = self.encoder_k(img_k)  # keys: NxC
             k = nn.functional.normalize(k, dim=1)
 
             # undo shuffle
-            if self.trainer.use_ddp or self.trainer.use_ddp2:
+            if self._use_ddp(self.trainer):
                 k = self._batch_unshuffle_ddp(k, idx_unshuffle)
 
         # compute logits
         # Einstein sum is more intuitive
         # positive logits: Nx1
-        l_pos = torch.einsum('nc,nc->n', [q, k]).unsqueeze(-1)
+        l_pos = torch.einsum("nc,nc->n", [q, k]).unsqueeze(-1)
         # negative logits: NxK
-        l_neg = torch.einsum('nc,ck->nk', [q, queue.clone().detach()])
+        l_neg = torch.einsum("nc,ck->nk", [q, queue.clone().detach()])
 
         # logits: Nx(1+K)
         logits = torch.cat([l_pos, l_neg], dim=1)
@@ -260,7 +258,7 @@ class Moco_v2(LightningModule):
 
     def training_step(self, batch, batch_idx):
         # in STL10 we pass in both lab+unl for online ft
-        if self.trainer.datamodule.name == 'stl10':
+        if self.trainer.datamodule.name == "stl10":
             # labeled_batch = batch[1]
             unlabeled_batch = batch[0]
             batch = unlabeled_batch
@@ -275,13 +273,13 @@ class Moco_v2(LightningModule):
 
         acc1, acc5 = precision_at_k(output, target, top_k=(1, 5))
 
-        log = {'train_loss': loss, 'train_acc1': acc1, 'train_acc5': acc5}
+        log = {"train_loss": loss, "train_acc1": acc1, "train_acc5": acc5}
         self.log_dict(log)
         return loss
 
     def validation_step(self, batch, batch_idx):
         # in STL10 we pass in both lab+unl for online ft
-        if self.trainer.datamodule.name == 'stl10':
+        if self.trainer.datamodule.name == "stl10":
             # labeled_batch = batch[1]
             unlabeled_batch = batch[0]
             batch = unlabeled_batch
@@ -295,15 +293,15 @@ class Moco_v2(LightningModule):
 
         acc1, acc5 = precision_at_k(output, target, top_k=(1, 5))
 
-        results = {'val_loss': loss, 'val_acc1': acc1, 'val_acc5': acc5}
+        results = {"val_loss": loss, "val_acc1": acc1, "val_acc5": acc5}
         return results
 
     def validation_epoch_end(self, outputs):
-        val_loss = mean(outputs, 'val_loss')
-        val_acc1 = mean(outputs, 'val_acc1')
-        val_acc5 = mean(outputs, 'val_acc5')
+        val_loss = mean(outputs, "val_loss")
+        val_acc1 = mean(outputs, "val_acc1")
+        val_acc5 = mean(outputs, "val_acc5")
 
-        log = {'val_loss': val_loss, 'val_acc1': val_acc1, 'val_acc5': val_acc5}
+        log = {"val_loss": val_loss, "val_acc1": val_acc1, "val_acc5": val_acc5}
         self.log_dict(log)
 
     def configure_optimizers(self):
@@ -311,36 +309,45 @@ class Moco_v2(LightningModule):
             self.parameters(),
             self.hparams.learning_rate,
             momentum=self.hparams.momentum,
-            weight_decay=self.hparams.weight_decay
+            weight_decay=self.hparams.weight_decay,
         )
-        return optimizer
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+            optimizer,
+            self.trainer.max_epochs,
+        )
+        return [optimizer], [scheduler]
 
     @staticmethod
     def add_model_specific_args(parent_parser):
         parser = ArgumentParser(parents=[parent_parser], add_help=False)
-        parser.add_argument('--base_encoder', type=str, default='resnet18')
-        parser.add_argument('--emb_dim', type=int, default=128)
-        parser.add_argument('--num_workers', type=int, default=8)
-        parser.add_argument('--num_negatives', type=int, default=65536)
-        parser.add_argument('--encoder_momentum', type=float, default=0.999)
-        parser.add_argument('--softmax_temperature', type=float, default=0.07)
-        parser.add_argument('--learning_rate', type=float, default=0.03)
-        parser.add_argument('--momentum', type=float, default=0.9)
-        parser.add_argument('--weight_decay', type=float, default=1e-4)
-        parser.add_argument('--data_dir', type=str, default='./')
-        parser.add_argument('--dataset', type=str, default='cifar10', choices=['cifar10', 'imagenet2012', 'stl10'])
-        parser.add_argument('--batch_size', type=int, default=256)
-        parser.add_argument('--use_mlp', action='store_true')
-        parser.add_argument('--meta_dir', default='.', type=str, help='path to meta.bin for imagenet')
+        parser.add_argument("--base_encoder", type=str, default="resnet18")
+        parser.add_argument("--emb_dim", type=int, default=128)
+        parser.add_argument("--num_workers", type=int, default=8)
+        parser.add_argument("--num_negatives", type=int, default=65536)
+        parser.add_argument("--encoder_momentum", type=float, default=0.999)
+        parser.add_argument("--softmax_temperature", type=float, default=0.07)
+        parser.add_argument("--learning_rate", type=float, default=0.03)
+        parser.add_argument("--momentum", type=float, default=0.9)
+        parser.add_argument("--weight_decay", type=float, default=1e-4)
+        parser.add_argument("--data_dir", type=str, default="./")
+        parser.add_argument("--dataset", type=str, default="cifar10", choices=["cifar10", "imagenet2012", "stl10"])
+        parser.add_argument("--batch_size", type=int, default=256)
+        parser.add_argument("--use_mlp", action="store_true")
+        parser.add_argument("--meta_dir", default=".", type=str, help="path to meta.bin for imagenet")
 
         return parser
+
+    @staticmethod
+    def _use_ddp(trainer: Trainer) -> bool:
+        return isinstance(trainer.strategy, DDPStrategy)
 
 
 # utils
 @torch.no_grad()
+@under_review()
 def concat_all_gather(tensor):
-    """
-    Performs all_gather operation on the provided tensors.
+    """Performs all_gather operation on the provided tensors.
+
     *** Warning ***: torch.distributed.all_gather has no gradient.
     """
     tensors_gather = [torch.ones_like(tensor) for _ in range(torch.distributed.get_world_size())]
@@ -350,6 +357,7 @@ def concat_all_gather(tensor):
     return output
 
 
+@under_review()
 def cli_main():
     from pl_bolts.datamodules import CIFAR10DataModule, SSLImagenetDataModule, STL10DataModule
 
@@ -362,19 +370,19 @@ def cli_main():
     parser = Moco_v2.add_model_specific_args(parser)
     args = parser.parse_args()
 
-    if args.dataset == 'cifar10':
+    if args.dataset == "cifar10":
         datamodule = CIFAR10DataModule.from_argparse_args(args)
         datamodule.train_transforms = Moco2TrainCIFAR10Transforms()
         datamodule.val_transforms = Moco2EvalCIFAR10Transforms()
 
-    elif args.dataset == 'stl10':
+    elif args.dataset == "stl10":
         datamodule = STL10DataModule.from_argparse_args(args)
         datamodule.train_dataloader = datamodule.train_dataloader_mixed
         datamodule.val_dataloader = datamodule.val_dataloader_mixed
         datamodule.train_transforms = Moco2TrainSTL10Transforms()
         datamodule.val_transforms = Moco2EvalSTL10Transforms()
 
-    elif args.dataset == 'imagenet2012':
+    elif args.dataset == "imagenet2012":
         datamodule = SSLImagenetDataModule.from_argparse_args(args)
         datamodule.train_transforms = Moco2TrainImagenetTransforms()
         datamodule.val_transforms = Moco2EvalImagenetTransforms()
@@ -389,5 +397,5 @@ def cli_main():
     trainer.fit(model, datamodule=datamodule)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     cli_main()

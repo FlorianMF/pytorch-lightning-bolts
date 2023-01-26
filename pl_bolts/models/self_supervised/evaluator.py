@@ -1,8 +1,10 @@
 from torch import nn
 
+from pl_bolts.utils.stability import under_review
 
+
+@under_review()
 class SSLEvaluator(nn.Module):
-
     def __init__(self, n_input, n_classes, n_hidden=512, p=0.1):
         super().__init__()
         self.n_input = n_input
@@ -28,10 +30,10 @@ class SSLEvaluator(nn.Module):
         return logits
 
 
+@under_review()
 class Flatten(nn.Module):
-
     def __init__(self):
-        super(Flatten, self).__init__()
+        super().__init__()
 
     def forward(self, input_tensor):
         return input_tensor.view(input_tensor.size(0), -1)

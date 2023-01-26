@@ -1,16 +1,17 @@
 from pl_bolts.transforms.self_supervised import Patchify, RandomTranslateWithReflect
 from pl_bolts.utils import _TORCHVISION_AVAILABLE
+from pl_bolts.utils.stability import under_review
 from pl_bolts.utils.warnings import warn_missing_pkg
 
 if _TORCHVISION_AVAILABLE:
     from torchvision import transforms
 else:  # pragma: no cover
-    warn_missing_pkg('torchvision')
+    warn_missing_pkg("torchvision")
 
 
+@under_review()
 class CPCTrainTransformsCIFAR10:
-    """
-    Transforms used for CPC:
+    """Transforms used for CPC:
 
     Transforms::
 
@@ -30,7 +31,6 @@ class CPCTrainTransformsCIFAR10:
         # in a DataModule
         module = CIFAR10DataModule(PATH)
         train_loader = module.train_dataloader(batch_size=32, transforms=CPCTrainTransformsCIFAR10())
-
     """
 
     def __init__(self, patch_size=8, overlap=4):
@@ -40,7 +40,7 @@ class CPCTrainTransformsCIFAR10:
             overlap: how much to overlap patches
         """
         if not _TORCHVISION_AVAILABLE:  # pragma: no cover
-            raise ModuleNotFoundError('You want to use `transforms` from `torchvision` which is not installed yet.')
+            raise ModuleNotFoundError("You want to use `transforms` from `torchvision` which is not installed yet.")
 
         self.patch_size = patch_size
         self.overlap = overlap
@@ -54,14 +54,16 @@ class CPCTrainTransformsCIFAR10:
         img_jitter = transforms.RandomApply([RandomTranslateWithReflect(4)], p=0.8)
         rnd_gray = transforms.RandomGrayscale(p=0.25)
 
-        self.transforms = transforms.Compose([
-            img_jitter,
-            col_jitter,
-            rnd_gray,
-            transforms.ToTensor(),
-            normalize,
-            Patchify(patch_size=patch_size, overlap_size=overlap),
-        ])
+        self.transforms = transforms.Compose(
+            [
+                img_jitter,
+                col_jitter,
+                rnd_gray,
+                transforms.ToTensor(),
+                normalize,
+                Patchify(patch_size=patch_size, overlap_size=overlap),
+            ]
+        )
 
     def __call__(self, inp):
         inp = self.flip_lr(inp)
@@ -69,9 +71,9 @@ class CPCTrainTransformsCIFAR10:
         return out1
 
 
+@under_review()
 class CPCEvalTransformsCIFAR10:
-    """
-    Transforms used for CPC:
+    """Transforms used for CPC:
 
     Transforms::
 
@@ -88,7 +90,6 @@ class CPCEvalTransformsCIFAR10:
         # in a DataModule
         module = CIFAR10DataModule(PATH)
         train_loader = module.train_dataloader(batch_size=32, transforms=CPCEvalTransformsCIFAR10())
-
     """
 
     def __init__(self, patch_size: int = 8, overlap: int = 4):
@@ -98,7 +99,7 @@ class CPCEvalTransformsCIFAR10:
             overlap: how much to overlap patches
         """
         if not _TORCHVISION_AVAILABLE:  # pragma: no cover
-            raise ModuleNotFoundError('You want to use `transforms` from `torchvision` which is not installed yet.')
+            raise ModuleNotFoundError("You want to use `transforms` from `torchvision` which is not installed yet.")
 
         # flipping image along vertical axis
         self.patch_size = patch_size
@@ -110,20 +111,22 @@ class CPCEvalTransformsCIFAR10:
             std=[x / 255.0 for x in [63.0, 62.1, 66.7]],
         )
 
-        self.transforms = transforms.Compose([
-            transforms.ToTensor(),
-            normalize,
-            Patchify(patch_size=patch_size, overlap_size=overlap),
-        ])
+        self.transforms = transforms.Compose(
+            [
+                transforms.ToTensor(),
+                normalize,
+                Patchify(patch_size=patch_size, overlap_size=overlap),
+            ]
+        )
 
     def __call__(self, inp):
         out1 = self.transforms(inp)
         return out1
 
 
+@under_review()
 class CPCTrainTransformsSTL10:
-    """
-    Transforms used for CPC:
+    """Transforms used for CPC:
 
     Transforms::
 
@@ -152,7 +155,7 @@ class CPCTrainTransformsSTL10:
             overlap: how much to overlap patches
         """
         if not _TORCHVISION_AVAILABLE:  # pragma: no cover
-            raise ModuleNotFoundError('You want to use `transforms` from `torchvision` which is not installed yet.')
+            raise ModuleNotFoundError("You want to use `transforms` from `torchvision` which is not installed yet.")
 
         # flipping image along vertical axis
         self.patch_size = patch_size
@@ -165,11 +168,16 @@ class CPCTrainTransformsSTL10:
         rnd_gray = transforms.RandomGrayscale(p=0.25)
         rand_crop = transforms.RandomResizedCrop(64, scale=(0.3, 1.0), ratio=(0.7, 1.4), interpolation=3)
 
-        self.transforms = transforms.Compose([
-            rand_crop, col_jitter, rnd_gray,
-            transforms.ToTensor(), normalize,
-            Patchify(patch_size=patch_size, overlap_size=overlap)
-        ])
+        self.transforms = transforms.Compose(
+            [
+                rand_crop,
+                col_jitter,
+                rnd_gray,
+                transforms.ToTensor(),
+                normalize,
+                Patchify(patch_size=patch_size, overlap_size=overlap),
+            ]
+        )
 
     def __call__(self, inp):
         inp = self.flip_lr(inp)
@@ -177,9 +185,9 @@ class CPCTrainTransformsSTL10:
         return out1
 
 
+@under_review()
 class CPCEvalTransformsSTL10:
-    """
-    Transforms used for CPC:
+    """Transforms used for CPC:
 
     Transforms::
 
@@ -196,7 +204,6 @@ class CPCEvalTransformsSTL10:
         # in a DataModule
         module = STL10DataModule(PATH)
         train_loader = module.train_dataloader(batch_size=32, transforms=CPCEvalTransformsSTL10())
-
     """
 
     def __init__(self, patch_size: int = 16, overlap: int = 8):
@@ -206,7 +213,7 @@ class CPCEvalTransformsSTL10:
             overlap: how much to overlap patches
         """
         if not _TORCHVISION_AVAILABLE:  # pragma: no cover
-            raise ModuleNotFoundError('You want to use `transforms` from `torchvision` which is not installed yet.')
+            raise ModuleNotFoundError("You want to use `transforms` from `torchvision` which is not installed yet.")
 
         # flipping image along vertical axis
         self.patch_size = patch_size
@@ -214,21 +221,24 @@ class CPCEvalTransformsSTL10:
         self.flip_lr = transforms.RandomHorizontalFlip(p=0.5)
         normalize = transforms.Normalize(mean=(0.43, 0.42, 0.39), std=(0.27, 0.26, 0.27))
 
-        self.transforms = transforms.Compose([
-            transforms.Resize(70, interpolation=3),
-            transforms.CenterCrop(64),
-            transforms.ToTensor(), normalize,
-            Patchify(patch_size=patch_size, overlap_size=overlap)
-        ])
+        self.transforms = transforms.Compose(
+            [
+                transforms.Resize(70, interpolation=3),
+                transforms.CenterCrop(64),
+                transforms.ToTensor(),
+                normalize,
+                Patchify(patch_size=patch_size, overlap_size=overlap),
+            ]
+        )
 
     def __call__(self, inp):
         out1 = self.transforms(inp)
         return out1
 
 
+@under_review()
 class CPCTrainTransformsImageNet128:
-    """
-    Transforms used for CPC:
+    """Transforms used for CPC:
 
     Transforms::
 
@@ -254,7 +264,7 @@ class CPCTrainTransformsImageNet128:
             overlap: how much to overlap patches
         """
         if not _TORCHVISION_AVAILABLE:  # pragma: no cover
-            raise ModuleNotFoundError('You want to use `transforms` from `torchvision` which is not installed yet.')
+            raise ModuleNotFoundError("You want to use `transforms` from `torchvision` which is not installed yet.")
 
         # image augmentation functions
         self.patch_size = patch_size
@@ -264,11 +274,13 @@ class CPCTrainTransformsImageNet128:
         col_jitter = transforms.RandomApply([transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)], p=0.8)
         rnd_gray = transforms.RandomGrayscale(p=0.25)
 
-        post_transform = transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-            Patchify(patch_size=patch_size, overlap_size=overlap),
-        ])
+        post_transform = transforms.Compose(
+            [
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+                Patchify(patch_size=patch_size, overlap_size=overlap),
+            ]
+        )
 
         self.transforms = transforms.Compose([rand_crop, col_jitter, rnd_gray, post_transform])
 
@@ -278,9 +290,9 @@ class CPCTrainTransformsImageNet128:
         return out1
 
 
+@under_review()
 class CPCEvalTransformsImageNet128:
-    """
-    Transforms used for CPC:
+    """Transforms used for CPC:
 
     Transforms::
 
@@ -306,21 +318,22 @@ class CPCEvalTransformsImageNet128:
             overlap: how much to overlap patches
         """
         if not _TORCHVISION_AVAILABLE:  # pragma: no cover
-            raise ModuleNotFoundError('You want to use `transforms` from `torchvision` which is not installed yet.')
+            raise ModuleNotFoundError("You want to use `transforms` from `torchvision` which is not installed yet.")
 
         # image augmentation functions
         self.patch_size = patch_size
         self.overlap = overlap
         self.flip_lr = transforms.RandomHorizontalFlip(p=0.5)
-        post_transform = transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-            Patchify(patch_size=patch_size, overlap_size=overlap),
-        ])
-        self.transforms = transforms.Compose([
-            transforms.Resize(146, interpolation=3),
-            transforms.CenterCrop(128), post_transform
-        ])
+        post_transform = transforms.Compose(
+            [
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+                Patchify(patch_size=patch_size, overlap_size=overlap),
+            ]
+        )
+        self.transforms = transforms.Compose(
+            [transforms.Resize(146, interpolation=3), transforms.CenterCrop(128), post_transform]
+        )
 
     def __call__(self, inp):
         inp = self.flip_lr(inp)

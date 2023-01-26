@@ -7,10 +7,12 @@ Accessed: May 14, 2020
 from torch import nn
 from torch.nn import functional as F
 
+from pl_bolts.utils.stability import under_review
 
+
+@under_review()
 class PixelCNN(nn.Module):
-    """
-    Implementation of `Pixel CNN <https://arxiv.org/abs/1606.05328>`_.
+    """Implementation of `Pixel CNN <https://arxiv.org/abs/1606.05328>`_.
 
     Paper authors: Aaron van den Oord, Nal Kalchbrenner, Oriol Vinyals, Lasse Espeholt, Alex Graves,
     Koray Kavukcuoglu

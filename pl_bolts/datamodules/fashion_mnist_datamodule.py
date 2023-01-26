@@ -8,7 +8,7 @@ if _TORCHVISION_AVAILABLE:
     from torchvision import transforms as transform_lib
     from torchvision.datasets import FashionMNIST
 else:  # pragma: no cover
-    warn_missing_pkg('torchvision')
+    warn_missing_pkg("torchvision")
     FashionMNIST = None
 
 
@@ -18,6 +18,18 @@ class FashionMNISTDataModule(VisionDataModule):
         wp-content/uploads/2019/02/Plot-of-a-Subset-of-Images-from-the-Fashion-MNIST-Dataset.png
         :width: 400
         :alt: Fashion MNIST
+
+    Args:
+        data_dir: Root directory of dataset.
+        val_split: Percent (float) or number (int) of samples to use for the validation split.
+        num_workers: Number of workers to use for loading data.
+        normalize: If ``True``, applies image normalization.
+        batch_size: Number of samples per batch to load.
+        seed: Random seed to be used for train/val/test splits.
+        shuffle: If ``True``, shuffles the train data every epoch.
+        pin_memory: If ``True``, the data loader will copy Tensors into CUDA pinned memory before
+                    returning them.
+        drop_last: If ``True``, drops the last incomplete batch.
 
     Specs:
         - 10 classes (1 per type)
@@ -40,6 +52,7 @@ class FashionMNISTDataModule(VisionDataModule):
 
         Trainer().fit(model, datamodule=dm)
     """
+
     name = "fashion_mnist"
     dataset_cls = FashionMNIST
     dims = (1, 28, 28)
@@ -48,32 +61,19 @@ class FashionMNISTDataModule(VisionDataModule):
         self,
         data_dir: Optional[str] = None,
         val_split: Union[int, float] = 0.2,
-        num_workers: int = 16,
+        num_workers: int = 0,
         normalize: bool = False,
         batch_size: int = 32,
         seed: int = 42,
-        shuffle: bool = False,
-        pin_memory: bool = False,
+        shuffle: bool = True,
+        pin_memory: bool = True,
         drop_last: bool = False,
         *args: Any,
         **kwargs: Any,
     ) -> None:
-        """
-        Args:
-            data_dir: Where to save/load the data
-            val_split: Percent (float) or number (int) of samples to use for the validation split
-            num_workers: How many workers to use for loading data
-            normalize: If true applies image normalize
-            batch_size: How many samples per batch to load
-            seed: Random seed to be used for train/val/test splits
-            shuffle: If true shuffles the train data every epoch
-            pin_memory: If true, the data loader will copy Tensors into CUDA pinned memory before
-                        returning them
-            drop_last: If true drops the last incomplete batch
-        """
         if not _TORCHVISION_AVAILABLE:  # pragma: no cover
             raise ModuleNotFoundError(
-                'You want to use FashionMNIST dataset loaded from `torchvision` which is not installed yet.'
+                "You want to use FashionMNIST dataset loaded from `torchvision` which is not installed yet."
             )
 
         super().__init__(  # type: ignore[misc]
@@ -92,17 +92,14 @@ class FashionMNISTDataModule(VisionDataModule):
 
     @property
     def num_classes(self) -> int:
-        """
-        Return:
-            10
-        """
+        """Returns the number of classes."""
         return 10
 
     def default_transforms(self) -> Callable:
         if self.normalize:
-            mnist_transforms = transform_lib.Compose([
-                transform_lib.ToTensor(), transform_lib.Normalize(mean=(0.5, ), std=(0.5, ))
-            ])
+            mnist_transforms = transform_lib.Compose(
+                [transform_lib.ToTensor(), transform_lib.Normalize(mean=(0.5,), std=(0.5,))]
+            )
         else:
             mnist_transforms = transform_lib.Compose([transform_lib.ToTensor()])
 

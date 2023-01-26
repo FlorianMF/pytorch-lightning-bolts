@@ -12,41 +12,40 @@ Lightning-Bolts documentation
 
    installation
    introduction_guide
-   models
 
 .. toctree::
    :maxdepth: 2
    :name: callbacks
    :caption: Callbacks
 
-   callbacks
-   info_callbacks
-   self_supervised_callbacks
-   variational_callbacks
-   vision_callbacks
+   callbacks/monitor
+   callbacks/torch_ort
+   callbacks/sparseml
+   callbacks/self_supervised
+   callbacks/variational
+   callbacks/vision
 
 .. toctree::
    :maxdepth: 2
    :name: datamodules
    :caption: DataModules
 
-   datamodules
-   datamodules_sklearn
-   datamodules_vision
+   datamodules/sklearn
+   datamodules/vision
 
 .. toctree::
    :maxdepth: 2
    :name: datasets
    :caption: Datasets
 
-   datasets
+   datasets/debug
 
 .. toctree::
    :maxdepth: 2
    :name: dataloaders
    :caption: DataLoaders
 
-   dataloaders
+   dataloaders/async
 
 .. toctree::
    :maxdepth: 2
@@ -60,40 +59,34 @@ Lightning-Bolts documentation
    :name: models
    :caption: Models
 
-   models_howto
-   classic_ml
-
-.. toctree::
-   :maxdepth: 2
-   :name: vision
-   :caption: Vision models
-
-   autoencoders
-   convolutional
-   gans
-   reinforce_learn
-   self_supervised_models
+   models/models_howto
+   models/autoencoders
+   models/convolutional
+   models/gans
+   models/object_detection
+   models/reinforce_learn
+   models/self_supervised
+   models/classic_ml
 
 .. toctree::
    :maxdepth: 2
    :name: learning_rate_schedulers
    :caption: Learning Rate Schedulers
 
-   learning_rate_schedulers
+   schedulers/warmup_cosine_annealing.rst
 
 .. toctree::
    :maxdepth: 2
    :name: transforms
    :caption: Data Processing
 
-   transforms
-   self_supervised_utils
-   semi_sup_processing
+   transforms/self_supervised
+   transforms/semi_supervised
 
 .. toctree::
    :maxdepth: 2
    :name: ssl
-   :caption: Learning Tasks
+   :caption: Tasks
 
    vision_tasks
 
@@ -104,6 +97,7 @@ Lightning-Bolts documentation
 
    CONTRIBUTING.md
    governance.md
+   stability.md
    CHANGELOG.md
 
 

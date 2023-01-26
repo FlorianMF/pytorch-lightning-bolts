@@ -1,17 +1,16 @@
-"""
-Dueling DQN
-"""
+"""Dueling DQN."""
 import argparse
 
 from pytorch_lightning import Trainer
 
 from pl_bolts.models.rl.common.networks import DuelingCNN
 from pl_bolts.models.rl.dqn_model import DQN
+from pl_bolts.utils.stability import under_review
 
 
+@under_review()
 class DuelingDQN(DQN):
-    """
-    PyTorch Lightning implementation of `Dueling DQN <https://arxiv.org/abs/1511.06581>`_
+    """PyTorch Lightning implementation of `Dueling DQN <https://arxiv.org/abs/1511.06581>`_
 
     Paper authors: Ziyu Wang, Tom Schaul, Matteo Hessel, Hado van Hasselt, Marc Lanctot, Nando de Freitas
 
@@ -30,16 +29,16 @@ class DuelingDQN(DQN):
         trainer = Trainer()
         trainer.fit(model)
 
-    .. note:: Currently only supports CPU and single GPU training with `distributed_backend=dp`
-
+    .. note:: Currently only supports CPU and single GPU training with `accelerator=dp`
     """
 
     def build_networks(self) -> None:
-        """Initializes the Dueling DQN train and target networks"""
+        """Initializes the Dueling DQN train and target networks."""
         self.net = DuelingCNN(self.obs_shape, self.n_actions)
         self.target_net = DuelingCNN(self.obs_shape, self.n_actions)
 
 
+@under_review()
 def cli_main():
     parser = argparse.ArgumentParser(add_help=False)
 
@@ -56,5 +55,5 @@ def cli_main():
     trainer.fit(model)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     cli_main()

@@ -1,16 +1,18 @@
+from argparse import ArgumentParser
 from typing import Any, Callable, Optional, Sequence, Union
 
 from pl_bolts.datamodules.vision_datamodule import VisionDataModule
 from pl_bolts.datasets import TrialCIFAR10
 from pl_bolts.transforms.dataset_normalizations import cifar10_normalization
 from pl_bolts.utils import _TORCHVISION_AVAILABLE
+from pl_bolts.utils.stability import under_review
 from pl_bolts.utils.warnings import warn_missing_pkg
 
 if _TORCHVISION_AVAILABLE:
     from torchvision import transforms as transform_lib
     from torchvision.datasets import CIFAR10
 else:  # pragma: no cover
-    warn_missing_pkg('torchvision')
+    warn_missing_pkg("torchvision")
     CIFAR10 = None
 
 
@@ -29,7 +31,7 @@ class CIFAR10DataModule(VisionDataModule):
 
     Transforms::
 
-        mnist_transforms = transform_lib.Compose([
+        transforms = transform_lib.Compose([
             transform_lib.ToTensor(),
             transforms.Normalize(
                 mean=[x / 255.0 for x in [125.3, 123.0, 113.9]],
@@ -54,6 +56,7 @@ class CIFAR10DataModule(VisionDataModule):
         dm.test_transforms = ...
         dm.val_transforms  = ...
     """
+
     name = "cifar10"
     dataset_cls = CIFAR10
     dims = (3, 32, 32)
@@ -62,12 +65,12 @@ class CIFAR10DataModule(VisionDataModule):
         self,
         data_dir: Optional[str] = None,
         val_split: Union[int, float] = 0.2,
-        num_workers: int = 16,
+        num_workers: int = 0,
         normalize: bool = False,
         batch_size: int = 32,
         seed: int = 42,
-        shuffle: bool = False,
-        pin_memory: bool = False,
+        shuffle: bool = True,
+        pin_memory: bool = True,
         drop_last: bool = False,
         *args: Any,
         **kwargs: Any,
@@ -120,14 +123,24 @@ class CIFAR10DataModule(VisionDataModule):
 
         return cf10_transforms
 
+    @staticmethod
+    def add_dataset_specific_args(parent_parser: ArgumentParser) -> ArgumentParser:
+        parser = ArgumentParser(parents=[parent_parser], add_help=False)
 
+        parser.add_argument("--data_dir", type=str, default=".")
+        parser.add_argument("--num_workers", type=int, default=0)
+        parser.add_argument("--batch_size", type=int, default=32)
+
+        return parser
+
+
+@under_review()
 class TinyCIFAR10DataModule(CIFAR10DataModule):
-    """
-    Standard CIFAR10, train, val, test splits and transforms
+    """Standard CIFAR10, train, val, test splits and transforms.
 
     Transforms::
 
-        mnist_transforms = transform_lib.Compose([
+        transforms = transform_lib.Compose([
             transform_lib.ToTensor(),
             transforms.Normalize(mean=[x / 255.0 for x in [125.3, 123.0, 113.9]],
                                  std=[x / 255.0 for x in [63.0, 62.1, 66.7]])
@@ -148,7 +161,7 @@ class TinyCIFAR10DataModule(CIFAR10DataModule):
         self,
         data_dir: Optional[str] = None,
         val_split: int = 50,
-        num_workers: int = 16,
+        num_workers: int = 0,
         num_samples: int = 100,
         labels: Optional[Sequence] = (1, 5, 8),
         *args: Any,

@@ -2,8 +2,9 @@ from argparse import ArgumentParser
 from typing import Any
 
 import torch
-from pytorch_lightning import LightningModule, seed_everything, Trainer
-from torch import nn, Tensor
+import torch.nn as nn
+from pytorch_lightning import LightningModule, Trainer, seed_everything
+from torch import Tensor
 from torch.utils.data import DataLoader
 
 from pl_bolts.callbacks import LatentDimInterpolator, TensorboardGenerativeModelImageSampler
@@ -19,15 +20,14 @@ else:  # pragma: no cover
 
 
 class DCGAN(LightningModule):
-    """
-    DCGAN implementation.
+    """DCGAN implementation.
 
     Example::
 
         from pl_bolts.models.gans import DCGAN
 
         m = DCGAN()
-        Trainer(gpus=2).fit(m)
+        Trainer(accelerator="gpu", devices=2).fit(m)
 
     Example CLI::
 
@@ -79,10 +79,10 @@ class DCGAN(LightningModule):
     def _weights_init(m):
         classname = m.__class__.__name__
         if classname.find("Conv") != -1:
-            torch.nn.init.normal_(m.weight, 0.0, 0.02)
+            nn.init.normal_(m.weight, 0.0, 0.02)
         elif classname.find("BatchNorm") != -1:
-            torch.nn.init.normal_(m.weight, 1.0, 0.02)
-            torch.nn.init.zeros_(m.bias)
+            nn.init.normal_(m.weight, 1.0, 0.02)
+            nn.init.zeros_(m.bias)
 
     def configure_optimizers(self):
         lr = self.hparams.learning_rate
@@ -92,8 +92,7 @@ class DCGAN(LightningModule):
         return [opt_disc, opt_gen], []
 
     def forward(self, noise: Tensor) -> Tensor:
-        """
-        Generates an image given input noise
+        """Generates an image given input noise.
 
         Example::
 
@@ -186,20 +185,24 @@ def cli_main(args=None):
     script_args, _ = parser.parse_known_args(args)
 
     if script_args.dataset == "lsun":
-        transforms = transform_lib.Compose([
-            transform_lib.Resize(script_args.image_size),
-            transform_lib.CenterCrop(script_args.image_size),
-            transform_lib.ToTensor(),
-            transform_lib.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-        ])
+        transforms = transform_lib.Compose(
+            [
+                transform_lib.Resize(script_args.image_size),
+                transform_lib.CenterCrop(script_args.image_size),
+                transform_lib.ToTensor(),
+                transform_lib.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+            ]
+        )
         dataset = LSUN(root=script_args.data_dir, classes=["bedroom_train"], transform=transforms)
         image_channels = 3
     elif script_args.dataset == "mnist":
-        transforms = transform_lib.Compose([
-            transform_lib.Resize(script_args.image_size),
-            transform_lib.ToTensor(),
-            transform_lib.Normalize((0.5, ), (0.5, )),
-        ])
+        transforms = transform_lib.Compose(
+            [
+                transform_lib.Resize(script_args.image_size),
+                transform_lib.ToTensor(),
+                transform_lib.Normalize((0.5,), (0.5,)),
+            ]
+        )
         dataset = MNIST(root=script_args.data_dir, download=True, transform=transforms)
         image_channels = 1
 

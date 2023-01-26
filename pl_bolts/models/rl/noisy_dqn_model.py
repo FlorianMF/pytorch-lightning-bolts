@@ -1,6 +1,4 @@
-"""
-Noisy DQN
-"""
+"""Noisy DQN."""
 import argparse
 from typing import Tuple
 
@@ -11,11 +9,12 @@ from torch import Tensor
 from pl_bolts.datamodules.experience_source import Experience
 from pl_bolts.models.rl.common.networks import NoisyCNN
 from pl_bolts.models.rl.dqn_model import DQN
+from pl_bolts.utils.stability import under_review
 
 
+@under_review()
 class NoisyDQN(DQN):
-    """
-    PyTorch Lightning implementation of `Noisy DQN <https://arxiv.org/abs/1706.10295>`_
+    """PyTorch Lightning implementation of `Noisy DQN <https://arxiv.org/abs/1706.10295>`_
 
     Paper authors: Meire Fortunato, Mohammad Gheshlaghi Azar, Bilal Piot, Jacob Menick, Ian Osband, Alex Graves,
     Vlad Mnih, Remi Munos, Demis Hassabis, Olivier Pietquin, Charles Blundell, Shane Legg
@@ -34,24 +33,24 @@ class NoisyDQN(DQN):
         trainer = Trainer()
         trainer.fit(model)
 
-    .. note:: Currently only supports CPU and single GPU training with `distributed_backend=dp`
-
+    .. note:: Currently only supports CPU and single GPU training with `accelerator=dp`
     """
 
     def build_networks(self) -> None:
-        """Initializes the Noisy DQN train and target networks"""
+        """Initializes the Noisy DQN train and target networks."""
         self.net = NoisyCNN(self.obs_shape, self.n_actions)
         self.target_net = NoisyCNN(self.obs_shape, self.n_actions)
 
     def on_train_start(self) -> None:
-        """Set the agents epsilon to 0 as the exploration comes from the network"""
+        """Set the agents epsilon to 0 as the exploration comes from the network."""
         self.agent.epsilon = 0.0
 
-    def train_batch(self, ) -> Tuple[Tensor, Tensor, Tensor, Tensor, Tensor]:
-        """
-        Contains the logic for generating a new batch of data to be passed to the DataLoader.
-        This is the same function as the standard DQN except that we dont update epsilon as it is always 0. The
-        exploration comes from the noisy network.
+    def train_batch(
+        self,
+    ) -> Tuple[Tensor, Tensor, Tensor, Tensor, Tensor]:
+        """Contains the logic for generating a new batch of data to be passed to the DataLoader. This is the same
+        function as the standard DQN except that we dont update epsilon as it is always 0. The exploration comes
+        from the noisy network.
 
         Returns:
             yields a Experience tuple containing the state, action, reward, done and next_state.
@@ -77,7 +76,7 @@ class NoisyDQN(DQN):
                 self.done_episodes += 1
                 self.total_rewards.append(episode_reward)
                 self.total_episode_steps.append(episode_steps)
-                self.avg_rewards = float(np.mean(self.total_rewards[-self.avg_reward_len:]))
+                self.avg_rewards = float(np.mean(self.total_rewards[-self.avg_reward_len :]))
                 self.state = self.env.reset()
                 episode_steps = 0
                 episode_reward = 0
@@ -92,6 +91,7 @@ class NoisyDQN(DQN):
                 break
 
 
+@under_review()
 def cli_main():
     parser = argparse.ArgumentParser(add_help=False)
 
@@ -108,5 +108,5 @@ def cli_main():
     trainer.fit(model)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     cli_main()

@@ -4,12 +4,13 @@ import torch.nn as nn
 
 from pl_bolts.models.detection.components._supported_models import TORCHVISION_MODEL_ZOO
 from pl_bolts.utils import _TORCHVISION_AVAILABLE  # noqa: F401
+from pl_bolts.utils.stability import under_review
 from pl_bolts.utils.warnings import warn_missing_pkg  # noqa: F401
 
 
+@under_review()
 def _create_backbone_generic(model: nn.Module, out_channels: int) -> nn.Module:
-    """
-    Generic Backbone creater. It removes the last linear layer.
+    """Generic Backbone creater. It removes the last linear layer.
 
     Args:
         model: torch.nn model
@@ -24,9 +25,9 @@ def _create_backbone_generic(model: nn.Module, out_channels: int) -> nn.Module:
 
 # Use this when you have Adaptive Pooling layer in End.
 # When Model.features is not applicable.
+@under_review()
 def _create_backbone_adaptive(model: nn.Module, out_channels: Optional[int] = None) -> nn.Module:
-    """
-    Creates backbone by removing linear after Adaptive Pooling layer.
+    """Creates backbone by removing linear after Adaptive Pooling layer.
 
     Args:
         model: torch.nn model with adaptive pooling layer
@@ -38,9 +39,9 @@ def _create_backbone_adaptive(model: nn.Module, out_channels: Optional[int] = No
     return _create_backbone_generic(model, out_channels=out_channels)
 
 
+@under_review()
 def _create_backbone_features(model: nn.Module, out_channels: int) -> nn.Module:
-    """
-    Creates backbone from feature sequential block.
+    """Creates backbone from feature sequential block.
 
     Args:
         model: torch.nn model with features as sequential block.
@@ -51,9 +52,9 @@ def _create_backbone_features(model: nn.Module, out_channels: int) -> nn.Module:
     return ft_backbone
 
 
+@under_review()
 def create_torchvision_backbone(model_name: str, pretrained: bool = True) -> Tuple[nn.Module, int]:
-    """
-    Creates CNN backbone from Torchvision.
+    """Creates CNN backbone from Torchvision.
 
     Args:
         model_name: Name of the model. E.g. resnet18
@@ -68,17 +69,17 @@ def create_torchvision_backbone(model_name: str, pretrained: bool = True) -> Tup
         ft_backbone = _create_backbone_features(net, 1280)
         return ft_backbone, out_channels
 
-    elif model_name in ["vgg11", "vgg13", "vgg16", "vgg19"]:
+    if model_name in ["vgg11", "vgg13", "vgg16", "vgg19"]:
         out_channels = 512
         ft_backbone = _create_backbone_features(net, out_channels)
         return ft_backbone, out_channels
 
-    elif model_name in ["resnet18", "resnet34"]:
+    if model_name in ["resnet18", "resnet34"]:
         out_channels = 512
         ft_backbone = _create_backbone_adaptive(net, out_channels)
         return ft_backbone, out_channels
 
-    elif model_name in [
+    if model_name in [
         "resnet50",
         "resnet101",
         "resnet152",
@@ -89,10 +90,8 @@ def create_torchvision_backbone(model_name: str, pretrained: bool = True) -> Tup
         ft_backbone = _create_backbone_adaptive(net, out_channels)
         return ft_backbone, out_channels
 
-    elif model_name in ["mnasnet0_5", "mnasnet0_75", "mnasnet1_0", "mnasnet1_3"]:
+    if model_name in ["mnasnet0_5", "mnasnet0_75", "mnasnet1_0", "mnasnet1_3"]:
         out_channels = 1280
         ft_backbone = _create_backbone_adaptive(net, out_channels)
         return ft_backbone, out_channels
-
-    else:
-        raise ValueError(f"Unsupported model: '{model_name}'")
+    raise ValueError(f"Unsupported model: '{model_name}'")

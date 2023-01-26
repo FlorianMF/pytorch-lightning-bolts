@@ -6,17 +6,18 @@ import torch
 from torch import Tensor
 
 from pl_bolts.utils import _SKLEARN_AVAILABLE
+from pl_bolts.utils.stability import under_review
 from pl_bolts.utils.warnings import warn_missing_pkg
 
 if _SKLEARN_AVAILABLE:
     from sklearn.utils import shuffle as sk_shuffle
 else:  # pragma: no cover
-    warn_missing_pkg('sklearn', pypi_name='scikit-learn')
+    warn_missing_pkg("sklearn", pypi_name="scikit-learn")
 
 
+@under_review()
 class Identity(torch.nn.Module):
-    """
-    An identity class to replace arbitrary layers in pretrained models
+    """An identity class to replace arbitrary layers in pretrained models.
 
     Example::
 
@@ -24,21 +25,20 @@ class Identity(torch.nn.Module):
 
         model = resnet18()
         model.fc = Identity()
-
     """
 
     def __init__(self) -> None:
-        super(Identity, self).__init__()
+        super().__init__()
 
     def forward(self, x: Tensor) -> Tensor:
         return x
 
 
-def balance_classes(X: Union[Tensor, np.ndarray], Y: Union[Tensor, np.ndarray, Sequence[int]],
-                    batch_size: int) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Makes sure each batch has an equal amount of data from each class.
-    Perfect balance
+@under_review()
+def balance_classes(
+    X: Union[Tensor, np.ndarray], Y: Union[Tensor, np.ndarray, Sequence[int]], batch_size: int
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Makes sure each batch has an equal amount of data from each class. Perfect balance.
 
     Args:
         X: input features
@@ -46,7 +46,7 @@ def balance_classes(X: Union[Tensor, np.ndarray], Y: Union[Tensor, np.ndarray, S
         batch_size: the ultimate batch size
     """
     if not _SKLEARN_AVAILABLE:  # pragma: no cover
-        raise ModuleNotFoundError('You want to use `shuffle` function from `scikit-learn` which is not installed yet.')
+        raise ModuleNotFoundError("You want to use `shuffle` function from `scikit-learn` which is not installed yet.")
 
     nb_classes = len(set(Y))
 
@@ -98,6 +98,7 @@ def balance_classes(X: Union[Tensor, np.ndarray], Y: Union[Tensor, np.ndarray, S
     return final_batches_x, final_batches_y
 
 
+@under_review()
 def generate_half_labeled_batches(
     smaller_set_X: np.ndarray,
     smaller_set_Y: np.ndarray,
@@ -105,11 +106,8 @@ def generate_half_labeled_batches(
     larger_set_Y: np.ndarray,
     batch_size: int,
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Given a labeled dataset and an unlabeled dataset, this function generates
-    a joint pair where half the batches are labeled and the other half is not
-
-    """
+    """Given a labeled dataset and an unlabeled dataset, this function generates a joint pair where half the
+    batches are labeled and the other half is not."""
     X = []
     Y = []
     half_batch = batch_size // 2
