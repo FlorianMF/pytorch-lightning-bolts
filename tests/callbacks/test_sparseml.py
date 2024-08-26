@@ -16,19 +16,18 @@ from pathlib import Path
 
 import pytest
 import torch
-from pytorch_lightning import Callback, Trainer
-from pytorch_lightning.core.lightning import LightningModule
+from pl_bolts.callbacks import SparseMLCallback
+from pl_bolts.utils import _SPARSEML_TORCH_SATISFIED
+from pytorch_lightning import Callback, LightningModule, Trainer
 from pytorch_lightning.utilities.exceptions import MisconfigurationException
 
-from pl_bolts.callbacks import SparseMLCallback
-from pl_bolts.utils import _SPARSEML_AVAILABLE
 from tests.helpers.boring_model import BoringModel
 
-if _SPARSEML_AVAILABLE:
+if _SPARSEML_TORCH_SATISFIED:
     from sparseml.pytorch.optim import RecipeManagerStepWrapper
 
 
-@pytest.fixture
+@pytest.fixture()
 def recipe():
     return """
     version: 0.1.0
@@ -56,7 +55,7 @@ def recipe():
     """
 
 
-@pytest.mark.skipif(not _SPARSEML_AVAILABLE, reason="SparseML isn't installed.")
+@pytest.mark.skipif(not _SPARSEML_TORCH_SATISFIED, reason="SparseML isn't installed.")
 def test_train_sparse_ml_callback(tmpdir, recipe):
     class TestCallback(Callback):
         def on_train_start(self, trainer: Trainer, pl_module: LightningModule) -> None:
@@ -79,15 +78,15 @@ def test_train_sparse_ml_callback(tmpdir, recipe):
     assert os.path.exists(output_dir)
 
 
-@pytest.mark.skipif(not _SPARSEML_AVAILABLE, reason="SparseML isn't installed.")
+@pytest.mark.skipif(not _SPARSEML_TORCH_SATISFIED, reason="SparseML isn't installed.")
 def test_fail_if_no_example_input_array_or_sample_batch(tmpdir, recipe):
     model = BoringModel()
+    output_dir = Path(tmpdir) / "model_export/"
     with pytest.raises(MisconfigurationException, match="To export the model, a sample batch must be passed"):
-        output_dir = Path(tmpdir) / "model_export/"
         SparseMLCallback.export_to_sparse_onnx(model, output_dir)
 
 
-@pytest.mark.skipif(not _SPARSEML_AVAILABLE, reason="SparseML isn't installed.")
+@pytest.mark.skipif(not _SPARSEML_TORCH_SATISFIED, reason="SparseML isn't installed.")
 def test_fail_if_multiple_optimizers(tmpdir, recipe):
     recipe_path = Path(tmpdir) / "recipe.yaml"
     recipe_path.write_text(recipe)
